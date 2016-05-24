@@ -20,23 +20,23 @@ def get_socket(ip, port):
 
 def start_stun(sock: socket.socket):
     while True:
-        bytes, addr = sock.recvfrom(__UDP_BUF_SIZE__)
+        b, addr = sock.recvfrom(__UDP_BUF_SIZE__)
         sock.sendto(str(addr[1]).encode("utf-8"), addr)
 
 
 def start_alloc_check():
     socks = [get_socket(*addr) for addr in zip(IP_ORDER, PORTS_ALLOC)]
     for sock in socks:
-        threading.Thread(group=None, target=start_stun, args=(sock)).start()
+        threading.Thread(group=None, target=start_stun, args=(sock,)).start()
 
 
 def start_filtering_check():
     socks = [get_socket(*addr) for addr in zip(IP_ORDER, PORTS_FILTER)]
     while True:
-        bytes, addr = socks[0].recvfrom(__UDP_BUF_SIZE__)
+        b, addr = socks[0].recvfrom(__UDP_BUF_SIZE__)
         print(addr)
         for sock in socks:
-            sock.sendto(str(addr[0]).encode("utf-8"), addr)
+            sock.sendto(str(addr[1]).encode("utf-8"), addr)
 
 
 def main():
