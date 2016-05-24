@@ -1,15 +1,12 @@
 import socket
 import threading
-from time import sleep
 
-__IP1__ = input("Enter first IP\n")
-__IP2__ = input("Enter second IP\n")
-__PORT_ALLOC_0__ = 2000
-__PORT_ALLOC_1__ = 2001
-__PORT_ALLOC_2__ = 2002
-__PORT_FIL0__ = 4000
-__PORT_FIL1__ = 4001
-__PORT_FIL2__ = 4002
+IP1 = input("Enter first IP\n")
+IP2 = input("Enter second IP\n")
+
+IP_ORDER = (IP1, IP1, IP2)
+PORTS_ALLOC = (2000, 2001, 2002)
+PORTS_FILTER = (3000, 3001, 3002)
 
 __UDP_BUF_SIZE__ = 2048
 
@@ -27,18 +24,28 @@ def start_stun(sock: socket.socket):
         sock.sendto(str(addr[1]).encode("utf-8"), addr)
 
 
-def main():
-    sock1 = get_socket(__IP1__, __PORT1__)
-    sock2 = get_socket(__IP1__, __PORT2__)
-    sock3 = get_socket(__IP2__, __PORT3__)
-    threading.Thread(group=None, target=start_stun, args=(sock2,)).start()
-    threading.Thread(group=None, target=start_stun, args=(sock3,)).start()
+def start_alloc_check():
+    socks = [get_socket(*addr) for addr in zip(IP_ORDER, PORTS_ALLOC)]
+    for sock in socks:
+        threading.Thread(group=None, target=start_stun, args=(sock)).start()
+
+
+def start_filtering_check():
+    socks = [get_socket(*addr) for addr in zip(IP_ORDER, PORTS_FILTER)]
     while True:
-        bytes, addr = sock1.recvfrom(__UDP_BUF_SIZE__)
+        bytes, addr = socks[0].recvfrom(__UDP_BUF_SIZE__)
         print(addr)
-        sock1.sendto(str(addr[0]).encode("utf-8"), addr)
-        sock2.sendto(str(addr[0]).encode("utf-8"), addr)
-        sock3.sendto(str(addr[0]).encode("utf-8"), addr)
+        for sock in socks:
+            sock.sendto(str(addr[0]).encode("utf-8"), addr)
+
+
+def main():
+    t_list = [threading.Thread(group=None, target=func) for func in (start_filtering_check, start_alloc_check)]
+    for t in t_list:
+        t.start()
+    for t in t_list:
+        t.join()
+        print(str(t), "has stopped! :O")
 
 
 main()
